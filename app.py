@@ -37,9 +37,11 @@ def getCode():
 						code = wks.cell(i+1,2).value
 						return dataFormatter(200,'Phone number registered successfully',[code])
 					else:
-						return dataFormatter(409,'Phone number already used',[])				
+						cell = wks.find(phone)
+						code = wks.cell(cell.row,cell.col-1).value
+						return dataFormatter(409,'Phone number already used',[code])
 				else:
-					return dataFormatter(400,'Invalid phone number',[])				
+					return dataFormatter(400,'Invalid phone number',[])
 			else:
 				return dataFormatter(400,"Bad Request",[])
 		else:
@@ -56,7 +58,7 @@ def emptyslot(phone_list):
 	for i,val in enumerate(phone_list):
 		if not val:
 			break
-	return i						
+	return i
 
 def getgspread():
 	scope = ['https://spreadsheets.google.com/feeds']
