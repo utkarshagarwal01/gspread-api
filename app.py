@@ -4,9 +4,27 @@ from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask,jsonify,request
 import json
 
+from time import time
+
 import re
 app = Flask(__name__)
 
+def getgspread():
+	scope = ['https://spreadsheets.google.com/feeds']
+	credentials = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
+	gc = gspread.authorize(credentials)
+	print "Connecting to gspread"
+	return gc
+
+def setup_app(app):
+	try:
+		gc = getgspread()
+		wks = gc.open('BF_Template').sheet1
+		return wks
+	except Exception as e:
+		print(e)
+		return None
+wks = setup_app(app)
 
 def dataFormatter(code,message,data):
 	resp = jsonify({
@@ -25,11 +43,9 @@ def getCode():
 			if len(keys) is 1 and keys[0] == 'phone':
 				phone = request.args.get('phone')
 				if validatePhone(phone):
-					try:
-						gc = getgspread()
-						wks = gc.open('BF_Template').sheet1
+					if wks:
 						phone_list = wks.col_values(3)
-					except:
+					else: 
 						return dataFormatter(500,'Could not connect to database',[])
 					if phone not in phone_list:
 						i = emptyslot(phone_list)
@@ -37,8 +53,8 @@ def getCode():
 						code = wks.cell(i+1,2).value
 						return dataFormatter(200,'Phone number registered successfully',[code])
 					else:
-						cell = wks.find(phone)
-						code = wks.cell(cell.row,cell.col-1).value
+						i = phone_list.index(phone)
+						code = wks.cell(i+1,2).value
 						return dataFormatter(409,'Phone number already used',[code])
 				else:
 					return dataFormatter(400,'Invalid phone number',[])
@@ -60,10 +76,6 @@ def emptyslot(phone_list):
 			break
 	return i
 
-def getgspread():
-	scope = ['https://spreadsheets.google.com/feeds']
-	credentials = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
-	gc = gspread.authorize(credentials)
-	return gc
+
 if __name__ == '__main__':
 	app.run(host='0.0.0.0',debug = True)
